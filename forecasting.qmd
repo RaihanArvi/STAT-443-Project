@@ -1,0 +1,193 @@
+---
+title: "Untitled"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(forecast)
+```
+
+```{r}
+# Function for variogram as defined in
+# Bisgaard and Kulahci (2011). Time Series Analysis and Forecasting by Example, Wiley
+variogram = function(y, lagmax=10, iprint=F)
+{ G = rep(1,lagmax)
+n = length(y)
+if(lagmax>n) { lagmax = n-2 }
+y1 = y[-1]; y2 = y[-n]
+d1 = y1-y2; denom = var(d1)
+for(k in 2:lagmax)
+{ y1 = y[(k+1):n]; y2 = y[1:(n-k)]
+dk = y1-y2
+numer = var(dk)
+G[k] = numer/denom
+}
+# H is the variogram assuming a stationary time series
+H = rep(1,lagmax)
+ac = c(acf(y,plot=F,lag.max=lagmax)$acf)
+H = (1-ac[-1])/(1-ac[2])
+if(iprint)
+{ print(cbind(G,H))
+mx = max(cbind(G,H))
+matplot(1:lagmax,cbind(G,H),ylim=c(0,mx),ylab="variogram", xlab="lag")
+abline(h=1)
+}
+list(G=G, H=H)
+}
+```
+
+```{r}
+persist_fc <- function(train, holdout, iprint = FALSE) {
+  ntrain <- length(train)
+  nh <- length(holdout)
+  sse <- 0
+  fc_vec <- numeric(nh)
+  fc <- train[ntrain] 
+  yt <- holdout[1]
+  fc_vec[1] <- fc
+  fcerror <- yt - fc
+  sse <- sse + (fcerror^2)
+  for (i in 2:nh) {
+    yt <- holdout[i]
+    fc <- holdout[i-1]
+    fc_vec[i] <- fc
+    fcerror <- yt - fc
+    sse <- sse + (fcerror^2)
+  }
+  return(list(rmse = sqrt(sse/nh), fc = fc_vec))
+}
+
+# Linear in the previous observation
+# b0,b1 from least squares or another estimation method
+linreg_fc = function(train_last, holdout, b0,b1)
+{ nh = length(holdout)
+  previous = c(train_last, holdout[-nh])
+  fc_vec = b0+b1*previous
+  rmse = sqrt(mean((holdout-fc_vec)^2))
+  return(list(rmse=rmse, fc=fc_vec))
+}
+
+# Simple Exponential Smoothing
+esm_fc <- function(train, holdout, alpha, level, iprint = FALSE) {
+  nh <- length(holdout)
+  sse <- 0
+  fc_vec <- numeric(nh)
+  L <- level 
+  for (i in 1:nh) {
+    fc <- L
+    fc_vec[i] <- fc
+    yt <- holdout[i]
+    fcerror <- yt - fc
+    sse <- sse + (fcerror^2)
+    L <- alpha * yt + (1 - alpha) * L
+  }
+  return(list(rmse = sqrt(sse / n_holdout), fc = fc_vec))
+}
+```
+
+## Load Data
+
+```{r}
+# Load Spot Crude Oil Price
+crude_oil <- read.csv("data/WTISPLC.csv")
+crude_oil_ts <- ts(crude_oil$WTISPLC,start=c(1975,1,1),freq=12)
+
+# match with WTI
+crude_oil_ts = window(crude_oil_ts, start=c(2016,2), end=c(2023))
+
+head(crude_oil_ts)
+```
+
+## Split Training - Holdout
+
+```{r}
+
+```
+
+```{r}
+plot(crude_oil_ts)
+```
+
+```{r}
+par(mfrow=c(2,2))
+plot.ts(oil_price)
+plot.ts(d_wti)
+acf(d_wti)
+pacf(d_wti)
+```
+
+## Data
+
+```{r}
+oil_price = crude_oil$WTISPLC
+d_wti = diff(oil_price)
+dl_wti = diff(log(oil_price))
+```
+
+## Simple Rules
+
+```{r}
+
+```
+
+```{r}
+plot.ts(dl_wti)
+acf(dl_wti)
+pacf(dl_wti)
+```
+
+```{r}
+variogram(oil_price, lagmax=20, iprint=T)
+variogram(d_wti, lagmax=20, iprint=T)
+variogram(dl_wti, lagmax=20, iprint=T)
+```
+
+## ARMA on difference
+
+```{r}
+dwti_arma = auto.arima(d_wti,seasonal=F,stationary=T)
+print(dwti_arma)
+```
+
+## ARMA on log return
+
+```{r}
+dlwti_arma = auto.arima(dl_wti,seasonal=F,stationary=T)
+print(dlwti_arma)
+```
+
+## We Introduce Exogenous Variable
+
+```{r}
+# Load Dow Jones Industrial Average Index Price
+djia <- read.csv("data/DJIA.csv")
+djia_ts <- ts(djia$DJIA, start=c(2016,2,8), freq=365)
+head(djia_ts)
+```
+
+```{r}
+plot(djia_ts)
+```
+
+```{r}
+djia_price = djia$DJIA
+d_djia = diff(djia_price)
+dl_djia = diff(log(djia_price))
+
+par(mfrow=c(2,2))
+plot.ts(djia_price)
+plot.ts(dl_djia)
+acf(dl_djia, na.action = na.pass)
+pacf(dl_djia, na.action = na.pass)
+```
+
+```{r}
+variogram(djia_price, lagmax=20, iprint=T)
+variogram(dl_djia, lagmax=20, iprint=T)
+```
+
+```{r}
+djia_arma = auto.arima(dl_djia, seasonal=F, stationary=T)
+print(djia_arma)
+```
