@@ -1,5 +1,5 @@
 ---
-title: "Untitled"
+title: "STAT 443 Project"
 format: pdf
 editor: visual
 ---
@@ -86,6 +86,52 @@ esm_fc <- function(train, holdout, alpha, level, iprint = FALSE) {
 }
 ```
 
+```{r}
+plot_forecast <- function(holdout, fc, model_name = "Model") {
+  
+  x <- seq_along(holdout)
+  
+  plot(x, holdout, type = "l", col = "black", lwd = 2,
+       main = paste("Forecast vs Actual -", model_name),
+       ylab = "Value", xlab = "Time")
+  
+  lines(x, fc, col = "red", lwd = 2)
+  
+  legend("topleft",
+         legend = c("Actual", "Forecast"),
+         col = c("black", "red"),
+         lty = 1, lwd = 2)
+}
+```
+
+```{r}
+arima_rolling_fc <- function(fitted_model, holdout, iprint = FALSE) {
+  nh <- length(holdout)
+  sse <- 0
+  fc_vec <- numeric(nh)
+  
+  # Extract the training data from the fitted model
+  train_data <- fitted_model$x
+  current_data <- train_data
+  
+  for (i in 1:nh) {
+    # Forecast one step ahead using current model
+    fc <- forecast(Arima(current_data, model = fitted_model), h = 1)$mean[1]
+    fc_vec[i] <- fc
+    
+    yt <- holdout[i]
+    fcerror <- yt - fc
+    sse <- sse + (fcerror^2)
+    
+    # Expand training data with actual observed value
+    current_data <- c(current_data, yt)
+  }
+  
+  return(list(rmse = sqrt(sse / nh), fc = fc_vec))
+}
+```
+
+
 ## Load Data
 
 ```{r}
@@ -93,69 +139,181 @@ esm_fc <- function(train, holdout, alpha, level, iprint = FALSE) {
 crude_oil <- read.csv("data/WTISPLC.csv")
 crude_oil_ts <- ts(crude_oil$WTISPLC,start=c(1975,1,1),freq=12)
 
-# match with WTI
-crude_oil_ts = window(crude_oil_ts, start=c(2016,2), end=c(2023))
-
 head(crude_oil_ts)
 ```
+
 
 ## Split Training - Holdout
 
 ```{r}
+crude_oil_train_ts = window(crude_oil_ts, end = c(2015,12))
+crude_oil_holdout_ts = window(crude_oil_ts, start = c(2016,1))
 
+d_crude_oil_train_ts = diff(crude_oil_train_ts)
+d_crude_oil_holdout_ts = diff(crude_oil_holdout_ts)
+
+dl_crude_oil_train_ts = diff(log(crude_oil_train_ts))
+dl_crude_oil_holdout_ts = diff(log(crude_oil_holdout_ts))
 ```
+
+```{r}
+end(d_crude_oil_holdout_ts)
+```
+
 
 ```{r}
 plot(crude_oil_ts)
 ```
 
-```{r}
-par(mfrow=c(2,2))
-plot.ts(oil_price)
-plot.ts(d_wti)
-acf(d_wti)
-pacf(d_wti)
-```
 
-## Data
-
-```{r}
-oil_price = crude_oil$WTISPLC
-d_wti = diff(oil_price)
-dl_wti = diff(log(oil_price))
-```
-
-## Simple Rules
-
-```{r}
-
-```
-
-```{r}
-plot.ts(dl_wti)
-acf(dl_wti)
-pacf(dl_wti)
-```
-
-```{r}
-variogram(oil_price, lagmax=20, iprint=T)
-variogram(d_wti, lagmax=20, iprint=T)
-variogram(dl_wti, lagmax=20, iprint=T)
-```
+# We first try ARIMA
 
 ## ARMA on difference
 
 ```{r}
-dwti_arma = auto.arima(d_wti,seasonal=F,stationary=T)
+dwti_arma = auto.arima(d_crude_oil_train_ts, seasonal=F, stationary=T)
 print(dwti_arma)
 ```
+
+### Rolling 1-step forward
+
+```{r}
+dwti_arma_rolling = arima_rolling_fc(dwti_arma, d_crude_oil_holdout_ts)
+dwti_arma_rolling$rmse
+```
+
 
 ## ARMA on log return
 
 ```{r}
-dlwti_arma = auto.arima(dl_wti,seasonal=F,stationary=T)
+dlwti_arma = auto.arima(dl_crude_oil_train_ts, seasonal=F, stationary=T)
 print(dlwti_arma)
 ```
+### Rolling 1-step forward
+
+```{r}
+dlwti_arma_rolling = arima_rolling_fc(dlwti_arma, dl_crude_oil_holdout_ts)
+dlwti_arma_rolling$rmse
+```
+
+## Plots
+
+```{r}
+plot_forecast(d_crude_oil_holdout_ts, dwti_arma_rolling$fc, "Price Difference")
+plot_forecast(dl_crude_oil_holdout_ts, dlwti_arma_rolling$fc, "Price Log Difference")
+```
+
+
+
+
+# We then introduce extrogenous variables
+
+```{r}
+usd_idx = read.csv("data/TWEXBGSMTH.csv")
+ind_prod = read.csv("data/INDPRO.csv")
+
+usd_idx$observation_date <- as.Date(usd_idx$observation_date)
+ind_prod$observation_date <- as.Date(ind_prod$observation_date)
+
+head(usd_idx)
+```
+
+```{r}
+usd_ts <- ts(usd_idx$TWEXBGSMTH, start = c(1975,1), frequency = 12)
+ind_ts <- ts(ind_prod$INDPRO, start = c(1975,1), frequency = 12)
+```
+
+```{r}
+plot(usd_ts, main="U.S. Dollar Index", ylab="")
+plot(ind_ts, main="Industrial Production Index", ylab="")
+```
+
+```{r}
+d_usd_ts <- diff(usd_ts)
+d_ind_ts <- diff(ind_ts)
+
+dl_usd_ts <- diff(log(usd_ts))
+dl_ind_ts <- diff(log(ind_ts))
+```
+
+## Split Train-Holdout
+
+```{r}
+ind_train_ts = window(ind_ts, end = c(2015,12))
+ind_holdout_ts = window(ind_ts, start = c(2016,1))
+
+d_ind_train_ts = window(d_ind_ts, end = c(2015,12))
+d_ind_holdout_ts = window(d_ind_ts, start = c(2016,1), end=c(2026,1))
+
+dl_ind_train_ts = window(dl_ind_ts, end = c(2015,12))
+dl_ind_holdout_ts = window(dl_ind_ts, start = c(2016,1), end=c(2026,1))
+```
+
+```{r}
+
+#BACKUPP
+usd_train_ts = window(usd_ts, end = c(2015,12))
+usd_holdout_ts = window(usd_ts, start = c(2016,1))
+
+d_usd_train_ts = window(d_usd_ts, end = c(2015,12))
+d_usd_holdout_ts = window(d_usd_ts, start = c(2016,1), end=c(2026,1))
+
+dl_usd_train_ts = window(dl_usd_ts, end = c(2015,12))
+dl_usd_holdout_ts = window(dl_usd_ts, start = c(2016,1), end=c(2026,1))
+```
+
+
+## Plot
+
+```{r}
+plot(d_usd_train_ts, main="Difference U.S. Dollar Index", ylab="")
+plot(d_ind_train_ts, main="Difference Industrial Production Index", ylab="")
+
+plot(dl_usd_train_ts, main="Diff. Log U.S. Dollar Index", ylab="")
+plot(dl_ind_train_ts, main="Diff. Log Industrial Production Index", ylab="")
+```
+
+## Diagnostics: variogram, ACF, PACF
+
+
+
+
+
+
+
+
+## Cross-correlation diagnostics for leading variables
+
+```{r}
+par(mfrow=c(1,2))
+
+ccf(dl_ind_train_ts, dl_crude_oil_train_ts, main="CCF: dlog(INDPRO) vs dlog(WTI)")
+
+plot(stats::lag(dl_ind_train_ts, -1), dl_ind_train_ts,
+     xlab="dlog(INDPRO) lag 1", ylab="dlog(WTI)",
+     main="Lag-1 scatter: INDPRO vs WTI")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Backup vvvvvvvvvvvvvvvvvvvvvvvvv
+
 
 ## We Introduce Exogenous Variable
 
@@ -190,4 +348,50 @@ variogram(dl_djia, lagmax=20, iprint=T)
 ```{r}
 djia_arma = auto.arima(dl_djia, seasonal=F, stationary=T)
 print(djia_arma)
+```
+
+
+
+
+
+
+
+
+
+
+fesrgdrjsdxfgsrtjklhnsegbr
+
+
+```{r}
+par(mfrow=c(2,2))
+plot.ts(oil_price)
+plot.ts(d_wti)
+acf(d_wti)
+pacf(d_wti)
+```
+
+## Data
+
+```{r}
+oil_price = crude_oil$WTISPLC
+d_wti = diff(oil_price)
+dl_wti = diff(log(oil_price))
+```
+
+## Simple Rules
+
+```{r}
+
+```
+
+```{r}
+plot.ts(dl_wti)
+acf(dl_wti)
+pacf(dl_wti)
+```
+
+```{r}
+variogram(oil_price, lagmax=20, iprint=T)
+variogram(d_wti, lagmax=20, iprint=T)
+variogram(dl_wti, lagmax=20, iprint=T)
 ```
