@@ -172,8 +172,38 @@ dl_crude_oil_holdout_ts = diff(log(crude_oil_holdout_ts))
 end(d_crude_oil_holdout_ts)
 ```
 
+##Diagnostic Plots
+
 ```{r}
 plot(crude_oil_ts)
+```
+
+```{r}
+par(mfrow = c(2,3))
+
+plot.ts(crude_oil_train_ts)
+acf(crude_oil_train_ts)
+pacf(crude_oil_train_ts)
+
+plot.ts(d_crude_oil_train_ts)
+acf(d_crude_oil_train_ts)
+pacf(d_crude_oil_train_ts)
+
+plot.ts(dl_crude_oil_train_ts)
+acf(dl_crude_oil_train_ts)
+pacf(dl_crude_oil_train_ts)
+```
+
+```{r}
+variogram(crude_oil_train_ts, lagmax=25, iprint=T)
+```
+
+```{r}
+variogram(d_crude_oil_train_ts, lagmax=25, iprint=T)
+```
+
+```{r}
+variogram(dl_crude_oil_train_ts, lagmax=25, iprint=T)
 ```
 
 # We first try ARIMA
@@ -305,9 +335,21 @@ plot(dl_opec_idx_train_ts, main="Diff. Log OPEC Oil Production Index", ylab="")
 
 ## Diagnostics: variogram, ACF, PACF
 
+```{r}
+par(mfrow=c(1,2))
+
+acf(dl_crude_oil_train_ts, 
+    main = "ACF: dlog(WTI)")
+
+pacf(dl_crude_oil_train_ts, 
+     main = "PACF: dlog(WTI)")
+
+```
+
 ## Cross-correlation diagnostics for leading variables
 
 ```{r}
+
 par(mfrow=c(1,2))
 
 ccf(dl_ind_train_ts, dl_crude_oil_train_ts, main="CCF: dlog(INDPRO) vs dlog(WTI)")
