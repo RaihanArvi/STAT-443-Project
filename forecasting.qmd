@@ -131,17 +131,29 @@ arima_rolling_fc <- function(fitted_model, holdout, iprint = FALSE) {
 }
 ```
 
-
 ## Load Data
 
 ```{r}
 # Load Spot Crude Oil Price
-crude_oil <- read.csv("data/WTISPLC.csv")
-crude_oil_ts <- ts(crude_oil$WTISPLC,start=c(1975,1,1),freq=12)
+#crude_oil <- read.csv("data/WTISPLC.csv")
+#crude_oil_ts <- ts(crude_oil$WTISPLC,start=c(1975,1,1),freq=12)
+
+#head(crude_oil_ts)
+
+# Load Spot Crude Oil Price
+crude_oil <- read.csv("data/bloomberg_oil_spot_monthly.tsv", header = TRUE, sep = "\t")
+crude_oil$Date <- as.Date(crude_oil$Date)
+crude_oil <- crude_oil[order(crude_oil$Date), ]
+
+crude_oil_ts <- ts(
+  crude_oil$Last.Price,
+  start = c(as.numeric(format(min(crude_oil$Date), "%Y")),
+            as.numeric(format(min(crude_oil$Date), "%m"))),
+  frequency = 12
+)
 
 head(crude_oil_ts)
 ```
-
 
 ## Split Training - Holdout
 
@@ -160,11 +172,9 @@ dl_crude_oil_holdout_ts = diff(log(crude_oil_holdout_ts))
 end(d_crude_oil_holdout_ts)
 ```
 
-
 ```{r}
 plot(crude_oil_ts)
 ```
-
 
 # We first try ARIMA
 
@@ -182,13 +192,13 @@ dwti_arma_rolling = arima_rolling_fc(dwti_arma, d_crude_oil_holdout_ts)
 dwti_arma_rolling$rmse
 ```
 
-
 ## ARMA on log return
 
 ```{r}
 dlwti_arma = auto.arima(dl_crude_oil_train_ts, seasonal=F, stationary=T)
 print(dlwti_arma)
 ```
+
 ### Rolling 1-step forward
 
 ```{r}
@@ -203,84 +213,97 @@ plot_forecast(d_crude_oil_holdout_ts, dwti_arma_rolling$fc, "Price Difference")
 plot_forecast(dl_crude_oil_holdout_ts, dlwti_arma_rolling$fc, "Price Log Difference")
 ```
 
-
-
-
-# We then introduce extrogenous variables
+# We then introduce extrogenous variables and split Train-Holdout
 
 ```{r}
-usd_idx = read.csv("data/TWEXBGSMTH.csv")
-ind_prod = read.csv("data/INDPRO.csv")
+#usd_idx = read.csv("data/TWEXBGSMTH.csv")
+#usd_idx = read.csv("data/dxy_monthly.csv")
+#ind_prod = read.csv("data/INDPRO.csv")
+#opec_prod = read.csv("data/opcrtotl_monthly.tsv")
 
-usd_idx$observation_date <- as.Date(usd_idx$observation_date)
+#usd index
+usd_idx <- read.csv("data/dxy_monthly.tsv", header = TRUE, sep = "\t")
+usd_idx$Date <- as.Date(usd_idx$Date)
+usd_idx <- usd_idx[order(usd_idx$Date), ]
+
+usd_idx_ts <- ts(
+  usd_idx$Last.Price,
+  start = c(as.numeric(format(min(usd_idx$Date), "%Y")),
+            as.numeric(format(min(usd_idx$Date), "%m"))),
+  end = c(2026,04),
+  frequency = 12
+)
+usd_idx_train_ts = window(usd_idx_ts, start = c(1975,1), end = c(2015,12))
+usd_idx_holdout_ts = window(usd_idx_ts, start = c(2016,1), end = c(2026,1))
+
+#Industrial production
+ind_prod = read.csv("data/INDPRO.csv")
 ind_prod$observation_date <- as.Date(ind_prod$observation_date)
+ind_prod_ts <- ts(ind_prod$INDPRO, start = c(1919,1), end = c(2026,2), frequency = 12)
+ind_prod_train_ts = window(ind_prod_ts, start = c(1975,1), end = c(2015,12))
+ind_prod_holdout_ts = window(ind_prod_ts, start = c(2016,1), end = c(2026,1))
+
+# OPEC oil production
+opec_prod <- read.csv("data/opcrtotl_monthly.tsv", header = TRUE, sep = "\t")
+opec_prod$Date <- as.Date(opec_prod$Date)
+opec_prod <- opec_prod[order(opec_prod$Date), ]
+
+opec_prod_ts <- ts(
+  opec_prod$Last.Price,
+  start = c(as.numeric(format(min(opec_prod$Date), "%Y")),
+            as.numeric(format(min(opec_prod$Date), "%m"))),
+  end = c(2026,03),
+  frequency = 12
+)
+opec_prod_train_ts = window(opec_prod_ts, start = c(1975,1), end = c(2015,12))
+opec_prod_holdout_ts = window(opec_prod_ts, start = c(2016,1), end = c(2026,1))
+
+# World MSCI Oil/Energy Company Index
+#TO DO 
+
+
 
 head(usd_idx)
 ```
 
 ```{r}
-usd_ts <- ts(usd_idx$TWEXBGSMTH, start = c(1975,1), frequency = 12)
-ind_ts <- ts(ind_prod$INDPRO, start = c(1975,1), frequency = 12)
+#usd_ts <- ts(usd_idx$Last.Price, start = c(1975,1), frequency = 12)
+#ind_ts <- ts(ind_prod$INDPRO, start = c(1975,1), frequency = 12)
+#opec_ts <- ts(opec_prod$Last.Price, start = c(1975,1), frequency = 12)
 ```
 
 ```{r}
-plot(usd_ts, main="U.S. Dollar Index", ylab="")
-plot(ind_ts, main="Industrial Production Index", ylab="")
+plot(usd_idx_ts, main="U.S. Dollar Index", ylab="")
+plot(ind_prod_ts, main="Industrial Production Index", ylab="")
+plot(opec_prod_ts, main="OPEC Oil Production Index", ylab="")
 ```
 
 ```{r}
-d_usd_ts <- diff(usd_ts)
-d_ind_ts <- diff(ind_ts)
+d_usd_ts <- diff(usd_idx_ts)
+dl_usd_idx_train_ts <- diff(log(usd_idx_train_ts))
 
-dl_usd_ts <- diff(log(usd_ts))
-dl_ind_ts <- diff(log(ind_ts))
+
+d_ind_ts <- diff(ind_prod_ts)
+dl_ind_train_ts <- diff(log(ind_prod_train_ts))
+
+d_opec_ts <- diff(opec_prod_ts)
+dl_opec_idx_train_ts <- diff(log(opec_prod_train_ts))
 ```
-
-## Split Train-Holdout
-
-```{r}
-ind_train_ts = window(ind_ts, end = c(2015,12))
-ind_holdout_ts = window(ind_ts, start = c(2016,1))
-
-d_ind_train_ts = window(d_ind_ts, end = c(2015,12))
-d_ind_holdout_ts = window(d_ind_ts, start = c(2016,1), end=c(2026,1))
-
-dl_ind_train_ts = window(dl_ind_ts, end = c(2015,12))
-dl_ind_holdout_ts = window(dl_ind_ts, start = c(2016,1), end=c(2026,1))
-```
-
-```{r}
-
-#BACKUPP
-usd_train_ts = window(usd_ts, end = c(2015,12))
-usd_holdout_ts = window(usd_ts, start = c(2016,1))
-
-d_usd_train_ts = window(d_usd_ts, end = c(2015,12))
-d_usd_holdout_ts = window(d_usd_ts, start = c(2016,1), end=c(2026,1))
-
-dl_usd_train_ts = window(dl_usd_ts, end = c(2015,12))
-dl_usd_holdout_ts = window(dl_usd_ts, start = c(2016,1), end=c(2026,1))
-```
-
 
 ## Plot
 
 ```{r}
-plot(d_usd_train_ts, main="Difference U.S. Dollar Index", ylab="")
-plot(d_ind_train_ts, main="Difference Industrial Production Index", ylab="")
+#plot(dl_usd_idx_train_ts, main="Difference U.S. Dollar Index", ylab="")
+plot(dl_usd_idx_train_ts, main="Diff. Log U.S. Dollar Index", ylab="")
 
-plot(dl_usd_train_ts, main="Diff. Log U.S. Dollar Index", ylab="")
+#plot(d_ind_train_ts, main="Difference Industrial Production Index", ylab="")
 plot(dl_ind_train_ts, main="Diff. Log Industrial Production Index", ylab="")
+
+#plot(d_opec_idx_train_ts, main="Difference Industrial Production Index", ylab="")
+plot(dl_opec_idx_train_ts, main="Diff. Log OPEC Oil Production Index", ylab="")
 ```
 
 ## Diagnostics: variogram, ACF, PACF
-
-
-
-
-
-
-
 
 ## Cross-correlation diagnostics for leading variables
 
@@ -294,26 +317,7 @@ plot(stats::lag(dl_ind_train_ts, -1), dl_ind_train_ts,
      main="Lag-1 scatter: INDPRO vs WTI")
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # Backup vvvvvvvvvvvvvvvvvvvvvvvvv
-
 
 ## We Introduce Exogenous Variable
 
@@ -350,17 +354,7 @@ djia_arma = auto.arima(dl_djia, seasonal=F, stationary=T)
 print(djia_arma)
 ```
 
-
-
-
-
-
-
-
-
-
 fesrgdrjsdxfgsrtjklhnsegbr
-
 
 ```{r}
 par(mfrow=c(2,2))
