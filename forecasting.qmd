@@ -317,75 +317,24 @@ plot(stats::lag(dl_ind_train_ts, -1), dl_ind_train_ts,
      main="Lag-1 scatter: INDPRO vs WTI")
 ```
 
-# Backup vvvvvvvvvvvvvvvvvvvvvvvvv
-
-## We Introduce Exogenous Variable
-
 ```{r}
-# Load Dow Jones Industrial Average Index Price
-djia <- read.csv("data/DJIA.csv")
-djia_ts <- ts(djia$DJIA, start=c(2016,2,8), freq=365)
-head(djia_ts)
+par(mfrow=c(1,2))
+
+ccf(dl_opec_idx_train_ts, dl_crude_oil_train_ts, main="CCF: dlog(OPEC) vs dlog(Bloomberg)")
+
+plot(stats::lag(dl_opec_idx_train_ts, -1), dl_opec_idx_train_ts,
+     xlab="dlog(OPEC) lag 1", ylab="dlog(Bloomberg)",
+     main="Lag-1 scatter: OPEC vs Bloomberg")
 ```
 
 ```{r}
-plot(djia_ts)
-```
+par(mfrow=c(1,2))
 
-```{r}
-djia_price = djia$DJIA
-d_djia = diff(djia_price)
-dl_djia = diff(log(djia_price))
+ccf(dl_usd_idx_train_ts, dl_crude_oil_train_ts, main="CCF: dlog(DXY) vs dlog(Bloomberg)")
 
-par(mfrow=c(2,2))
-plot.ts(djia_price)
-plot.ts(dl_djia)
-acf(dl_djia, na.action = na.pass)
-pacf(dl_djia, na.action = na.pass)
-```
-
-```{r}
-variogram(djia_price, lagmax=20, iprint=T)
-variogram(dl_djia, lagmax=20, iprint=T)
-```
-
-```{r}
-djia_arma = auto.arima(dl_djia, seasonal=F, stationary=T)
-print(djia_arma)
-```
-
-fesrgdrjsdxfgsrtjklhnsegbr
-
-```{r}
-par(mfrow=c(2,2))
-plot.ts(oil_price)
-plot.ts(d_wti)
-acf(d_wti)
-pacf(d_wti)
-```
-
-## Data
-
-```{r}
-oil_price = crude_oil$WTISPLC
-d_wti = diff(oil_price)
-dl_wti = diff(log(oil_price))
+plot(stats::lag(dl_usd_idx_train_ts, -1), dl_usd_idx_train_ts,
+     xlab="dlog(DXY) lag 1", ylab="dlog(Bloomberg)",
+     main="Lag-1 scatter: DXY vs Bloomberg")
 ```
 
 ## Simple Rules
-
-```{r}
-
-```
-
-```{r}
-plot.ts(dl_wti)
-acf(dl_wti)
-pacf(dl_wti)
-```
-
-```{r}
-variogram(oil_price, lagmax=20, iprint=T)
-variogram(d_wti, lagmax=20, iprint=T)
-variogram(dl_wti, lagmax=20, iprint=T)
-```
