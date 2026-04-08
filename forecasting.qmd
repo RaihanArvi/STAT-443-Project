@@ -131,6 +131,53 @@ arima_rolling_fc <- function(fitted_model, holdout, iprint = FALSE) {
 }
 ```
 
+```{r}
+#armax_fc = function(tsdata, ntrain, order, traincoef, xreg)
+#{
+#  obj = arima(tsdata,
+#              order=order,
+#              init=traincoef,
+#              fixed=traincoef,
+#              xreg=xreg,
+#              include.mean=TRUE,
+#              method="ML",
+#              optim.control=list(maxit=0))
+#
+#  fc = tsdata - obj$residuals
+#
+#  holdout_fc = fc[(ntrain+1):length(tsdata)]
+#  holdout = tsdata[(ntrain+1):length(tsdata)]
+#
+#  rmse = sqrt(mean((holdout - holdout_fc)^2))
+#
+#  list(rmse=rmse, fc=holdout_fc)
+#}
+
+armax_fc = function(tsdata, ntrain, order, traincoef, xreg)
+{
+  coef_names <- names(traincoef)
+  
+  include_mean <- any(coef_names %in% c("intercept", "mean"))
+  
+  obj = arima(tsdata,
+              order = order,
+              init = traincoef,
+              fixed = traincoef,
+              xreg = xreg,
+              include.mean = include_mean,
+              method = "ML",
+              optim.control = list(maxit = 0))
+  
+  fc = tsdata - obj$residuals
+  
+  holdout_fc = fc[(ntrain+1):length(tsdata)]
+  holdout = tsdata[(ntrain+1):length(tsdata)]
+  
+  rmse = sqrt(mean((holdout - holdout_fc)^2))
+  
+  list(rmse = rmse, fc = holdout_fc)
+}
+```
 ## Load Data
 
 ```{r}
@@ -377,6 +424,250 @@ ccf(dl_usd_idx_train_ts, dl_crude_oil_train_ts, main="CCF: dlog(DXY) vs dlog(Blo
 plot(stats::lag(dl_usd_idx_train_ts, -1), dl_usd_idx_train_ts,
      xlab="dlog(DXY) lag 1", ylab="dlog(Bloomberg)",
      main="Lag-1 scatter: DXY vs Bloomberg")
+```
+
+## ARMAX
+
+### Split Train/Holdout
+
+```{r}
+dl_crude_oil_train_ts <- diff(log(crude_oil_train_ts))
+dl_crude_oil_holdout_ts <- diff(log(crude_oil_holdout_ts))
+
+dl_usd_idx_train_ts <- diff(log(usd_idx_train_ts))
+dl_ind_train_ts <- diff(log(ind_prod_train_ts))
+dl_opec_idx_train_ts <- diff(log(opec_prod_train_ts))
+```
+
+### CCF
+
+```{r}
+par(mfrow=c(1,2))
+
+ccf(dl_ind_train_ts, dl_crude_oil_train_ts,
+    main="CCF: dlog(INDPRO) vs dlog(WTI)")
+
+plot(stats::lag(dl_ind_train_ts, -1), dl_crude_oil_train_ts,
+     xlab="dlog(INDPRO) lag 1",
+     ylab="dlog(WTI)",
+     main="Lag-1 scatter: INDPRO vs WTI")
+```
+
+```{r}
+par(mfrow=c(1,2))
+
+ccf(dl_opec_idx_train_ts, dl_crude_oil_train_ts,
+    main="CCF: dlog(OPEC) vs dlog(WTI)")
+
+plot(stats::lag(dl_opec_idx_train_ts, -1), dl_crude_oil_train_ts,
+     xlab="dlog(OPEC) lag 1",
+     ylab="dlog(WTI)",
+     main="Lag-1 scatter: OPEC vs WTI")
+```
+
+```{r}
+par(mfrow=c(1,2))
+
+ccf(dl_usd_idx_train_ts, dl_crude_oil_train_ts,
+    main="CCF: dlog(DXY) vs dlog(WTI)")
+
+plot(stats::lag(dl_usd_idx_train_ts, -1), dl_crude_oil_train_ts,
+     xlab="dlog(DXY) lag 1",
+     ylab="dlog(WTI)",
+     main="Lag-1 scatter: DXY vs WTI")
+```
+
+### Align data
+
+```{r}
+# auto splicing instead of manually like unemploy-gdp-armax.pdf because the results more make sense this way
+df_all <- ts.intersect(
+  oil = dl_crude_oil_train_ts,
+  usd = dl_usd_idx_train_ts,
+  ind = dl_ind_train_ts,
+  opec = dl_opec_idx_train_ts
+)
+```
+
+### create lags
+
+```{r}
+ind1 <- stats::lag(df_all[,"ind"], -1)
+opec1 <- stats::lag(df_all[,"opec"], -1)
+usd1 <- stats::lag(df_all[,"usd"], -1)
+
+df_reg <- na.omit(cbind(
+  oil = df_all[,"oil"],
+  ind1 = ind1,
+  opec1 = opec1,
+  usd1 = usd1
+))
+```
+
+### train/test (aligned)
+
+```{r}
+n_total <- nrow(df_reg)
+n_train <- floor(0.8 * n_total)
+
+train_reg <- df_reg[1:n_train,]
+holdout_reg <- df_reg[(n_train+1):n_total,]
+
+y_train <- train_reg[,"oil"]
+y_holdout <- holdout_reg[,"oil"]
+
+xreg_train <- as.matrix(train_reg[,c("ind1","opec1","usd1")])
+xreg_holdout <- as.matrix(holdout_reg[,c("ind1","opec1","usd1")])
+```
+
+### the models
+
+```{r}
+arima_model <- auto.arima(y_train, seasonal=FALSE)
+
+armax_model <- auto.arima(
+  y_train,
+  xreg = xreg_train,
+  seasonal = FALSE
+)
+```
+
+### rolling 1-step
+
+```{r}
+# Fit ARMAX on training set
+armax_model <- auto.arima(
+  y_train,
+  xreg = xreg_train,
+  seasonal = FALSE
+)
+
+summary(armax_model)
+
+# Extract order from auto.arima object
+arma <- armax_model$arma
+order <- c(arma[1], arma[6], arma[2])
+
+# Extract coefficients
+traincoef <- armax_model$coef
+
+# Combine training + holdout
+y_all <- c(y_train, y_holdout)
+xreg_all <- rbind(xreg_train, xreg_holdout)
+
+# Run fixed-coefficient ARMAX forecasting
+armax_res <- armax_fc(
+  tsdata = y_all,
+  ntrain = length(y_train),
+  order = order,
+  traincoef = traincoef,
+  xreg = xreg_all
+)
+```
+### rmse + plot
+
+```{r}
+arima_model <- auto.arima(y_train, seasonal = FALSE)
+arima_res <- arima_rolling_fc(arima_model, y_holdout)
+
+cat("ARIMA RMSE:", arima_res$rmse, "\n")
+cat("ARMAX RMSE:", armax_res$rmse, "\n")
+
+plot(y_holdout, type="l", col="black", lwd=2,
+     main="Forecast Comparison",
+     ylab="dlog(WTI)")
+
+lines(arima_res$fc, col="blue", lwd=2)
+lines(armax_res$fc, col="red", lwd=2)
+
+legend("topleft",
+       legend=c("Actual", "ARIMA", "ARMAX"),
+       col=c("black", "blue", "red"),
+       lwd=2)
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
 ```
 
 ## Simple Rules
