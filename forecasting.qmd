@@ -132,26 +132,27 @@ arima_rolling_fc <- function(fitted_model, holdout, iprint = FALSE) {
 ```
 
 ```{r}
-#armax_fc = function(tsdata, ntrain, order, traincoef, xreg)
-#{
-#  obj = arima(tsdata,
-#              order=order,
-#              init=traincoef,
-#              fixed=traincoef,
-#              xreg=xreg,
-#              include.mean=TRUE,
-#              method="ML",
-#              optim.control=list(maxit=0))
-#
-#  fc = tsdata - obj$residuals
-#
-#  holdout_fc = fc[(ntrain+1):length(tsdata)]
-#  holdout = tsdata[(ntrain+1):length(tsdata)]
-#
-#  rmse = sqrt(mean((holdout - holdout_fc)^2))
-#
-#  list(rmse=rmse, fc=holdout_fc)
-#}
+rolling_armax <- function(y_train, x_train, y_holdout, x_holdout) {
+  nh <- length(y_holdout)
+  fc <- numeric(nh)
+  
+  data_y <- y_train
+  data_x <- x_train
+  
+  for (i in 1:nh) {
+    fit <- auto.arima(data_y, xreg = data_x, seasonal=FALSE)
+    
+    fc[i] <- forecast(fit,
+                      xreg = matrix(x_holdout[i,], nrow=1),
+                      h=1)$mean
+    
+    data_y <- c(data_y, y_holdout[i])
+    data_x <- rbind(data_x, x_holdout[i,])
+  }
+  
+  rmse <- sqrt(mean((y_holdout - fc)^2))
+  return(list(rmse = rmse, fc = fc))
+}
 
 armax_fc = function(tsdata, ntrain, order, traincoef, xreg)
 {
@@ -175,7 +176,7 @@ armax_fc = function(tsdata, ntrain, order, traincoef, xreg)
   
   rmse = sqrt(mean((holdout - holdout_fc)^2))
   
-  list(rmse = rmse, fc = holdout_fc)
+  return(list(rmse = rmse, fc = holdout_fc))
 }
 ```
 
@@ -495,7 +496,7 @@ armax_model <- auto.arima(
 )
 ```
 
-### rolling 1-step
+### Fit The ARMAX Model
 
 ```{r}
 # Fit ARMAX on training set
@@ -528,7 +529,8 @@ armax_res <- armax_fc(
 )
 ```
 
-### rmse + plot
+
+### RMSE, 1-Step Rolling Forecast, and Plots
 
 ```{r}
 arima_model <- auto.arima(y_train, seasonal = FALSE)
@@ -537,6 +539,7 @@ arima_res <- arima_rolling_fc(arima_model, y_holdout)
 cat("ARIMA RMSE:", arima_res$rmse, "\n")
 cat("ARMAX RMSE:", armax_res$rmse, "\n")
 
+# ARIMA, ARMAX vs Holdout Set
 plot(y_holdout, type="l", col="black", lwd=2,
      main="Forecast Comparison",
      ylab="dlog(WTI)")
@@ -548,90 +551,11 @@ legend("topleft",
        legend=c("Actual", "ARIMA", "ARMAX"),
        col=c("black", "blue", "red"),
        lwd=2)
+
+plot_forecast(y_holdout, armax_res$fc, "ARMAX vs. Holdout Set")
 ```
 
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
 
 ## Simple Rules
+
+# TODO
