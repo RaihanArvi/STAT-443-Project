@@ -388,10 +388,10 @@ plot(dl_opec_idx_train_ts, main="Diff. Log OPEC Oil Production Index", ylab="")
 par(mfrow=c(1,2))
 
 acf(dl_crude_oil_train_ts, 
-    main = "ACF: dlog(WTI)")
+    main = "ACF: dlog(crude_oil_train)")
 
 pacf(dl_crude_oil_train_ts, 
-     main = "PACF: dlog(WTI)")
+     main = "PACF: dlog(crude_oil_train)")
 
 ```
 
@@ -529,7 +529,6 @@ armax_res <- armax_fc(
 )
 ```
 
-
 ### RMSE, 1-Step Rolling Forecast, and Plots
 
 ```{r}
@@ -542,7 +541,7 @@ cat("ARMAX RMSE:", armax_res$rmse, "\n")
 # ARIMA, ARMAX vs Holdout Set
 plot(y_holdout, type="l", col="black", lwd=2,
      main="Forecast Comparison",
-     ylab="dlog(WTI)")
+     ylab="dlog(crude_oil_holdout)")
 
 lines(arima_res$fc, col="blue", lwd=2)
 lines(armax_res$fc, col="red", lwd=2)
@@ -554,7 +553,6 @@ legend("topleft",
 
 plot_forecast(y_holdout, armax_res$fc, "ARMAX vs. Holdout Set")
 ```
-
 
 ## Simple Rules
 
