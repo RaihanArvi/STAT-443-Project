@@ -178,6 +178,7 @@ armax_fc = function(tsdata, ntrain, order, traincoef, xreg)
   list(rmse = rmse, fc = holdout_fc)
 }
 ```
+
 ## Load Data
 
 ```{r}
@@ -439,44 +440,6 @@ dl_ind_train_ts <- diff(log(ind_prod_train_ts))
 dl_opec_idx_train_ts <- diff(log(opec_prod_train_ts))
 ```
 
-### CCF
-
-```{r}
-par(mfrow=c(1,2))
-
-ccf(dl_ind_train_ts, dl_crude_oil_train_ts,
-    main="CCF: dlog(INDPRO) vs dlog(WTI)")
-
-plot(stats::lag(dl_ind_train_ts, -1), dl_crude_oil_train_ts,
-     xlab="dlog(INDPRO) lag 1",
-     ylab="dlog(WTI)",
-     main="Lag-1 scatter: INDPRO vs WTI")
-```
-
-```{r}
-par(mfrow=c(1,2))
-
-ccf(dl_opec_idx_train_ts, dl_crude_oil_train_ts,
-    main="CCF: dlog(OPEC) vs dlog(WTI)")
-
-plot(stats::lag(dl_opec_idx_train_ts, -1), dl_crude_oil_train_ts,
-     xlab="dlog(OPEC) lag 1",
-     ylab="dlog(WTI)",
-     main="Lag-1 scatter: OPEC vs WTI")
-```
-
-```{r}
-par(mfrow=c(1,2))
-
-ccf(dl_usd_idx_train_ts, dl_crude_oil_train_ts,
-    main="CCF: dlog(DXY) vs dlog(WTI)")
-
-plot(stats::lag(dl_usd_idx_train_ts, -1), dl_crude_oil_train_ts,
-     xlab="dlog(DXY) lag 1",
-     ylab="dlog(WTI)",
-     main="Lag-1 scatter: DXY vs WTI")
-```
-
 ### Align data
 
 ```{r}
@@ -564,6 +527,7 @@ armax_res <- armax_fc(
   xreg = xreg_all
 )
 ```
+
 ### rmse + plot
 
 ```{r}
