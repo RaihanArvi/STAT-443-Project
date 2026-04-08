@@ -394,8 +394,9 @@ pacf(dl_crude_oil_train_ts,
      main = "PACF: dlog(crude_oil_train)")
 
 ```
+## ARMAX
 
-## Cross-correlation diagnostics for leading variables
+### Cross-correlation diagnostics for leading variables
 
 ```{r}
 
@@ -427,8 +428,6 @@ plot(stats::lag(dl_usd_idx_train_ts, -1), dl_usd_idx_train_ts,
      xlab="dlog(DXY) lag 1", ylab="dlog(Bloomberg)",
      main="Lag-1 scatter: DXY vs Bloomberg")
 ```
-
-## ARMAX
 
 ### Split Train/Holdout
 
