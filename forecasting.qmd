@@ -132,28 +132,7 @@ arima_rolling_fc <- function(fitted_model, holdout, iprint = FALSE) {
 ```
 
 ```{r}
-rolling_armax <- function(y_train, x_train, y_holdout, x_holdout) {
-  nh <- length(y_holdout)
-  fc <- numeric(nh)
-  
-  data_y <- y_train
-  data_x <- x_train
-  
-  for (i in 1:nh) {
-    fit <- auto.arima(data_y, xreg = data_x, seasonal=FALSE)
-    
-    fc[i] <- forecast(fit,
-                      xreg = matrix(x_holdout[i,], nrow=1),
-                      h=1)$mean
-    
-    data_y <- c(data_y, y_holdout[i])
-    data_x <- rbind(data_x, x_holdout[i,])
-  }
-  
-  rmse <- sqrt(mean((y_holdout - fc)^2))
-  return(list(rmse = rmse, fc = fc))
-}
-
+# Fixed-coefficient moving 1-step forecast for ARMAX
 armax_fc = function(tsdata, ntrain, order, traincoef, xreg)
 {
   coef_names <- names(traincoef)
@@ -361,7 +340,6 @@ plot(opec_prod_ts, main="OPEC Oil Production Index", ylab="")
 d_usd_ts <- diff(usd_idx_ts)
 dl_usd_idx_train_ts <- diff(log(usd_idx_train_ts))
 
-
 d_ind_ts <- diff(ind_prod_ts)
 dl_ind_train_ts <- diff(log(ind_prod_train_ts))
 
@@ -394,6 +372,7 @@ pacf(dl_crude_oil_train_ts,
      main = "PACF: dlog(crude_oil_train)")
 
 ```
+
 ## ARMAX
 
 ### Cross-correlation diagnostics for leading variables
@@ -443,7 +422,7 @@ dl_opec_idx_train_ts <- diff(log(opec_prod_train_ts))
 ### Align data
 
 ```{r}
-# auto splicing instead of manually like unemploy-gdp-armax.pdf because the results more make sense this way
+# auto splicing
 df_all <- ts.intersect(
   oil = dl_crude_oil_train_ts,
   usd = dl_usd_idx_train_ts,
@@ -481,76 +460,112 @@ y_holdout <- holdout_reg[,"oil"]
 
 xreg_train <- as.matrix(train_reg[,c("ind1","opec1","usd1")])
 xreg_holdout <- as.matrix(holdout_reg[,c("ind1","opec1","usd1")])
+
+y_all = c(y_train, y_holdout)
+xreg_all = rbind(xreg_train, xreg_holdout)
 ```
 
-### the models
+### ARIMA baseline
 
 ```{r}
-arima_model <- auto.arima(y_train, seasonal=FALSE)
+arima_auto <- auto.arima(y_train, seasonal = FALSE, stationary = TRUE)
+arima_auto
 
-armax_model <- auto.arima(
+arima_base <- arima_rolling_fc(arima_auto, y_holdout)
+arima_base$rmse
+```
+### ARMAX candidates
+
+```{r}
+armax_auto <- auto.arima(
   y_train,
   xreg = xreg_train,
-  seasonal = FALSE
+  seasonal = FALSE,
+  stationary = TRUE
 )
+
+armax_auto
 ```
 
-### Fit The ARMAX Model
-
 ```{r}
-# Fit ARMAX on training set
-armax_model <- auto.arima(
-  y_train,
-  xreg = xreg_train,
-  seasonal = FALSE
-)
+# Same idea as Hyndman-Khandakar algorithm (Chapter 8.7) 
+arma <- armax_auto$arma
+p0 <- arma[1]
+q0 <- arma[2]
 
-summary(armax_model)
+cand_orders <- unique(rbind(
+  c(p0, 0, q0),
+  c(max(p0 - 1, 0), 0, q0),
+  c(p0 + 1, 0, q0),
+  c(p0, 0, max(q0 - 1, 0)),
+  c(p0, 0, q0 + 1),
+  c(0, 0, 0),
+  c(1, 0, 0),
+  c(0, 0, 1),
+  c(1, 0, 1),
+  c(2, 0, 0),
+  c(0, 0, 2)
+))
 
-# Extract order from auto.arima object
-arma <- armax_model$arma
-order <- c(arma[1], arma[6], arma[2])
-
-# Extract coefficients
-traincoef <- armax_model$coef
-
-# Combine training + holdout
-y_all <- c(y_train, y_holdout)
-xreg_all <- rbind(xreg_train, xreg_holdout)
-
-# Run fixed-coefficient ARMAX forecasting
-armax_res <- armax_fc(
-  tsdata = y_all,
-  ntrain = length(y_train),
-  order = order,
-  traincoef = traincoef,
-  xreg = xreg_all
-)
+cand_orders
 ```
 
-### RMSE, 1-Step Rolling Forecast, and Plots
+### Evaluate ARMAX candidates by holdout RMSE 
 
 ```{r}
-arima_model <- auto.arima(y_train, seasonal = FALSE)
-arima_res <- arima_rolling_fc(arima_model, y_holdout)
+# Candidate 1
+fit1 = arima(y_train, order=c(1,0,0), xreg=xreg_train, method="ML")
+fc1 = armax_fc(tsdata=y_all, ntrain=length(y_train),
+               order=c(1,0,0), traincoef=fit1$coef, xreg=xreg_all)
 
-cat("ARIMA RMSE:", arima_res$rmse, "\n")
-cat("ARMAX RMSE:", armax_res$rmse, "\n")
+# Candidate 2
+fit2 = arima(y_train, order=c(0,0,1), xreg=xreg_train, method="ML")
+fc2 = armax_fc(tsdata=y_all, ntrain=length(y_train),
+               order=c(0,0,1), traincoef=fit2$coef, xreg=xreg_all)
 
-# ARIMA, ARMAX vs Holdout Set
-plot(y_holdout, type="l", col="black", lwd=2,
-     main="Forecast Comparison",
-     ylab="dlog(crude_oil_holdout)")
+# Candidate 3
+fit3 = arima(y_train, order=c(1,0,1), xreg=xreg_train, method="ML")
+fc3 = armax_fc(tsdata=y_all, ntrain=length(y_train),
+               order=c(1,0,1), traincoef=fit3$coef, xreg=xreg_all)
 
-lines(arima_res$fc, col="blue", lwd=2)
-lines(armax_res$fc, col="red", lwd=2)
+# Candidate 4
+fit4 = arima(y_train, order=c(2,0,0), xreg=xreg_train, method="ML")
+fc4 = armax_fc(tsdata=y_all, ntrain=length(y_train),
+               order=c(2,0,0), traincoef=fit4$coef, xreg=xreg_all)
 
-legend("topleft",
-       legend=c("Actual", "ARIMA", "ARMAX"),
-       col=c("black", "blue", "red"),
-       lwd=2)
+# Candidate 5
+fit5 = arima(y_train, order=c(0,0,2), xreg=xreg_train, method="ML")
+fc5 = armax_fc(tsdata=y_all, ntrain=length(y_train),
+               order=c(0,0,2), traincoef=fit5$coef, xreg=xreg_all)
+```
 
-plot_forecast(y_holdout, armax_res$fc, "ARMAX vs. Holdout Set")
+### Compare ARMAX models by RMSE and AIC
+
+```{r}
+armax_table = cbind(
+  model = c("ARMAX(1,0,0)",
+            "ARMAX(0,0,1)",
+            "ARMAX(1,0,1)",
+            "ARMAX(2,0,0)",
+            "ARMAX(0,0,2)"),
+  aic = c(fit1$aic, fit2$aic, fit3$aic, fit4$aic, fit5$aic),
+  rmse = c(fc1$rmse, fc2$rmse, fc3$rmse, fc4$rmse, fc5$rmse)
+)
+
+print(armax_table)
+```
+
+### Choose the best model from the RMSEs
+
+```{r}
+best_rmse = min(c(fc1$rmse, fc2$rmse, fc3$rmse, fc4$rmse, fc5$rmse))
+cat("Best ARMAX RMSE =", best_rmse, "\n")
+```
+
+### Plot the best ARMAX forecasts
+
+```{r}
+plot_forecast(y_holdout, fc1$fc, "ARMAX(0,0,1)")
 ```
 
 ## Simple Rules
