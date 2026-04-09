@@ -132,27 +132,27 @@ arima_rolling_fc <- function(fitted_model, holdout, iprint = FALSE) {
 ```
 
 ```{r}
-rolling_armax <- function(y_train, x_train, y_holdout, x_holdout) {
-  nh <- length(y_holdout)
-  fc <- numeric(nh)
-  
-  data_y <- y_train
-  data_x <- x_train
-  
-  for (i in 1:nh) {
-    fit <- auto.arima(data_y, xreg = data_x, seasonal=FALSE)
-    
-    fc[i] <- forecast(fit,
-                      xreg = matrix(x_holdout[i,], nrow=1),
-                      h=1)$mean
-    
-    data_y <- c(data_y, y_holdout[i])
-    data_x <- rbind(data_x, x_holdout[i,])
-  }
-  
-  rmse <- sqrt(mean((y_holdout - fc)^2))
-  return(list(rmse = rmse, fc = fc))
-}
+#rolling_armax <- function(y_train, x_train, y_holdout, x_holdout) {
+#  nh <- length(y_holdout)
+#  fc <- numeric(nh)
+#  
+#  data_y <- y_train
+#  data_x <- x_train
+#  
+#  for (i in 1:nh) {
+#    fit <- auto.arima(data_y, xreg = data_x, seasonal=FALSE)
+#    
+#    fc[i] <- forecast(fit,
+#                      xreg = matrix(x_holdout[i,], nrow=1),
+#                      h=1)$mean
+#    
+#    data_y <- c(data_y, y_holdout[i])
+#    data_x <- rbind(data_x, x_holdout[i,])
+#  }
+#  
+#  rmse <- sqrt(mean((y_holdout - fc)^2))
+#  return(list(rmse = rmse, fc = fc))
+#}
 
 armax_fc = function(tsdata, ntrain, order, traincoef, xreg)
 {
