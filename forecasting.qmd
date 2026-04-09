@@ -453,16 +453,6 @@ plot(stats::lag(dl_usd_idx_train_ts, -1), dl_usd_idx_train_ts,
      main="Lag-1 scatter: DXY vs Bloomberg")
 ```
 
-```{r}
-par(mfrow=c(1,2))
-
-ccf(dl_sp_idx_train_ts, dl_crude_oil_train_ts, main="CCF: dlog(SPSIOP) vs dlog(Bloomberg)")
-
-plot(stats::lag(dl_sp_idx_train_ts, -1), dl_sp_idx_train_ts,
-     xlab="dlog(SPSIOP) lag 1", ylab="dlog(Bloomberg)",
-     main="Lag-1 scatter: SPSIOP vs Bloomberg")
-```
-
 ### Split Train/Holdout
 
 ```{r}
@@ -472,7 +462,6 @@ dl_crude_oil_holdout_ts <- diff(log(crude_oil_holdout_ts))
 dl_usd_idx_train_ts <- diff(log(usd_idx_train_ts))
 dl_ind_train_ts <- diff(log(ind_prod_train_ts))
 dl_opec_idx_train_ts <- diff(log(opec_prod_train_ts))
-dl_sp_idx_train_ts <- diff(log(sp_idx_train_ts))
 ```
 
 ### Align data
@@ -483,8 +472,7 @@ df_all <- ts.intersect(
   oil = dl_crude_oil_train_ts,
   usd = dl_usd_idx_train_ts,
   ind = dl_ind_train_ts,
-  opec = dl_opec_idx_train_ts,
-  sp = dl_sp_idx_train_ts
+  opec = dl_opec_idx_train_ts
 )
 ```
 
@@ -494,14 +482,12 @@ df_all <- ts.intersect(
 ind1 <- stats::lag(df_all[,"ind"], -1)
 opec1 <- stats::lag(df_all[,"opec"], -1)
 usd1 <- stats::lag(df_all[,"usd"], -1)
-sp1 <- stats::lag(df_all[,"sp"], -1)
 
 df_reg <- na.omit(cbind(
   oil = df_all[,"oil"],
   ind1 = ind1,
   opec1 = opec1,
-  usd1 = usd1,
-  sp1 = sp1
+  usd1 = usd1
 ))
 ```
 
