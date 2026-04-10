@@ -38,22 +38,22 @@ list(G=G, H=H)
 ```
 
 ```{r}
-persist_fc <- function(train, holdout, iprint = FALSE) {
-  ntrain <- length(train)
-  nh <- length(holdout)
-  sse <- 0
-  fc_vec <- numeric(nh)
-  fc <- train[ntrain] 
-  yt <- holdout[1]
-  fc_vec[1] <- fc
-  fcerror <- yt - fc
-  sse <- sse + (fcerror^2)
+persist_fc = function(train, holdout, iprint = FALSE) {
+  ntrain = length(train)
+  nh = length(holdout)
+  sse = 0
+  fc_vec = numeric(nh)
+  fc = train[ntrain] 
+  yt = holdout[1]
+  fc_vec[1] = fc
+  fcerror = yt - fc
+  sse = sse + (fcerror^2)
   for (i in 2:nh) {
-    yt <- holdout[i]
-    fc <- holdout[i-1]
-    fc_vec[i] <- fc
-    fcerror <- yt - fc
-    sse <- sse + (fcerror^2)
+    yt = holdout[i]
+    fc = holdout[i-1]
+    fc_vec[i] = fc
+    fcerror = yt - fc
+    sse = sse + (fcerror^2)
   }
   return(list(rmse = sqrt(sse/nh), fc = fc_vec))
 }
@@ -69,43 +69,43 @@ linreg_fc = function(train_last, holdout, b0,b1)
 }
 
 # Average Forecast
-avg_fc <- function(train, holdout) {
-  nh <- length(holdout)
-  avg <- mean(train)
-  sse <- 0
-  fc_vec <- numeric(nh)
+avg_fc = function(train, holdout) {
+  nh = length(holdout)
+  avg = mean(train)
+  sse = 0
+  fc_vec = numeric(nh)
   for (i in 1:nh) {
-    fc <- avg
-    fc_vec[i] <- fc
-    yt <- holdout[i]
-    fcerror <- yt - fc
-    sse <- sse + (fcerror^2)
+    fc = avg
+    fc_vec[i] = fc
+    yt = holdout[i]
+    fcerror = yt - fc
+    sse = sse + (fcerror^2)
   }
   return(list(rmse = sqrt(sse/nh), fc = fc_vec))
 }
 
 # Simple Exponential Smoothing
-esm_fc <- function(train, holdout, alpha, level, iprint = FALSE) {
-  nh <- length(holdout)
-  sse <- 0
-  fc_vec <- numeric(nh)
-  L <- level 
+esm_fc = function(train, holdout, alpha, level, iprint = FALSE) {
+  nh = length(holdout)
+  sse = 0
+  fc_vec = numeric(nh)
+  L = level 
   for (i in 1:nh) {
-    fc <- L
-    fc_vec[i] <- fc
-    yt <- holdout[i]
-    fcerror <- yt - fc
-    sse <- sse + (fcerror^2)
-    L <- alpha * yt + (1 - alpha) * L
+    fc = L
+    fc_vec[i] = fc
+    yt = holdout[i]
+    fcerror = yt - fc
+    sse = sse + (fcerror^2)
+    L = alpha * yt + (1 - alpha) * L
   }
   return(list(rmse = sqrt(sse / nh), fc = fc_vec))
 }
 ```
 
 ```{r}
-plot_forecast <- function(holdout, fc, model_name = "Model") {
+plot_forecast = function(holdout, fc, model_name = "Model") {
   
-  x <- seq_along(holdout)
+  x = seq_along(holdout)
   
   plot(x, holdout, type = "l", col = "black", lwd = 2,
        main = paste("Forecast vs Actual -", model_name),
@@ -121,42 +121,42 @@ plot_forecast <- function(holdout, fc, model_name = "Model") {
 ```
 
 ```{r}
-arima_rolling_fc <- function(fitted_model, holdout, iprint = FALSE) {
-  nh <- length(holdout)
-  sse <- 0
-  fc_vec <- numeric(nh)
+arima_rolling_fc = function(fitted_model, holdout, iprint = FALSE) {
+  nh = length(holdout)
+  sse = 0
+  fc_vec = numeric(nh)
   
   # Extract the training data from the fitted model
-  train_data <- fitted_model$x
-  current_data <- train_data
+  train_data = fitted_model$x
+  current_data = train_data
   
   for (i in 1:nh) {
     # Forecast one step ahead using current model
-    fc <- forecast(Arima(current_data, model = fitted_model), h = 1)$mean[1]
-    fc_vec[i] <- fc
+    fc = forecast(Arima(current_data, model = fitted_model), h = 1)$mean[1]
+    fc_vec[i] = fc
     
-    yt <- holdout[i]
-    fcerror <- yt - fc
-    sse <- sse + (fcerror^2)
+    yt = holdout[i]
+    fcerror = yt - fc
+    sse = sse + (fcerror^2)
     
     # Expand training data with actual observed value
-    current_data <- c(current_data, yt)
+    current_data = c(current_data, yt)
   }
   
   return(list(rmse = sqrt(sse / nh), fc = fc_vec))
 }
 
-rolling_armax_fixed <- function(y_train, x_train, y_holdout, x_holdout,
+rolling_armax_fixed = function(y_train, x_train, y_holdout, x_holdout,
                                 order, include_mean = TRUE) {
-  nh <- length(y_holdout)
-  fc_vec <- numeric(nh)
+  nh = length(y_holdout)
+  fc_vec = numeric(nh)
 
-  y_hist <- y_train
-  x_hist <- as.matrix(x_train)
-  x_holdout <- as.matrix(x_holdout)
+  y_hist = y_train
+  x_hist = as.matrix(x_train)
+  x_holdout = as.matrix(x_holdout)
 
   for (i in 1:nh) {
-    fit <- forecast::Arima(
+    fit = forecast::Arima(
       y_hist,
       order = order,
       xreg = x_hist,
@@ -164,35 +164,35 @@ rolling_armax_fixed <- function(y_train, x_train, y_holdout, x_holdout,
       method = "ML"
     )
 
-    newx <- matrix(x_holdout[i, ], nrow = 1)
+    newx = matrix(x_holdout[i, ], nrow = 1)
 
-    fc_vec[i] <- forecast::forecast(
+    fc_vec[i] = forecast::forecast(
       fit,
       xreg = newx,
       h = 1
     )$mean[1]
 
-    y_hist <- c(y_hist, y_holdout[i])
-    x_hist <- rbind(x_hist, newx)
+    y_hist = c(y_hist, y_holdout[i])
+    x_hist = rbind(x_hist, newx)
   }
 
-  rmse <- sqrt(mean((y_holdout - fc_vec)^2))
+  rmse = sqrt(mean((y_holdout - fc_vec)^2))
   list(rmse = rmse, fc = fc_vec)
 }
 ```
 
 ```{r}
-rolling_armax <- function(y_train, x_train, y_holdout, x_holdout,
+rolling_armax = function(y_train, x_train, y_holdout, x_holdout,
                           order = c(0,0,1), include_mean = TRUE) {
-  nh <- length(y_holdout)
-  fc_vec <- numeric(nh)
+  nh = length(y_holdout)
+  fc_vec = numeric(nh)
 
-  y_hist <- as.numeric(y_train)
-  x_hist <- as.matrix(x_train)
-  x_holdout <- as.matrix(x_holdout)
+  y_hist = as.numeric(y_train)
+  x_hist = as.matrix(x_train)
+  x_holdout = as.matrix(x_holdout)
 
   for (i in 1:nh) {
-    fit <- forecast::Arima(
+    fit = forecast::Arima(
       y_hist,
       order = order,
       xreg = x_hist,
@@ -200,26 +200,26 @@ rolling_armax <- function(y_train, x_train, y_holdout, x_holdout,
       method = "ML"
     )
 
-    newx <- matrix(x_holdout[i, ], nrow = 1)
+    newx = matrix(x_holdout[i, ], nrow = 1)
 
-    fc_vec[i] <- as.numeric(
+    fc_vec[i] = as.numeric(
       forecast::forecast(fit, xreg = newx, h = 1)$mean
     )
 
     # update history with the ACTUAL next observation
-    y_hist <- c(y_hist, y_holdout[i])
-    x_hist <- rbind(x_hist, newx)
+    y_hist = c(y_hist, y_holdout[i])
+    x_hist = rbind(x_hist, newx)
   }
 
-  rmse <- sqrt(mean((y_holdout - fc_vec)^2))
+  rmse = sqrt(mean((y_holdout - fc_vec)^2))
   list(rmse = rmse, fc = fc_vec)
 }
 
 armax_fc = function(tsdata, ntrain, order, traincoef, xreg)
 {
-  coef_names <- names(traincoef)
+  coef_names = names(traincoef)
   
-  include_mean <- any(coef_names %in% c("intercept", "mean"))
+  include_mean = any(coef_names %in% c("intercept", "mean"))
   
   obj = arima(tsdata,
               order = order,
@@ -245,17 +245,11 @@ armax_fc = function(tsdata, ntrain, order, traincoef, xreg)
 
 ```{r}
 # Load Spot Crude Oil Price
-#crude_oil <- read.csv("data/WTISPLC.csv")
-#crude_oil_ts <- ts(crude_oil$WTISPLC,start=c(1975,1,1),freq=12)
+crude_oil = read.csv("data/bloomberg_oil_spot_monthly.tsv", header = TRUE, sep = "\t")
+crude_oil$Date = as.Date(crude_oil$Date)
+crude_oil = crude_oil[order(crude_oil$Date), ]
 
-#head(crude_oil_ts)
-
-# Load Spot Crude Oil Price
-crude_oil <- read.csv("data/bloomberg_oil_spot_monthly.tsv", header = TRUE, sep = "\t")
-crude_oil$Date <- as.Date(crude_oil$Date)
-crude_oil <- crude_oil[order(crude_oil$Date), ]
-
-crude_oil_ts <- ts(
+crude_oil_ts = ts(
   crude_oil$Last.Price,
   start = c(as.numeric(format(min(crude_oil$Date), "%Y")),
             as.numeric(format(min(crude_oil$Date), "%m"))),
@@ -263,7 +257,6 @@ crude_oil_ts <- ts(
 )
 
 head(crude_oil_ts)
-#write.table(crude_oil_ts, "savedData/crude_oil_ts_new.csv", sep = ",", row.names = FALSE)
 ```
 
 ## Split Training - Holdout
@@ -275,13 +268,9 @@ crude_oil_holdout_ts = window(crude_oil_ts, start = c(2011,1), end = c(2026,1))
 d_crude_oil_train_ts = diff(crude_oil_train_ts)
 d_crude_oil_holdout_ts = diff(crude_oil_holdout_ts)
 
-dl_crude_oil_ts <- diff(log(crude_oil_ts))
+dl_crude_oil_ts = diff(log(crude_oil_ts))
 dl_crude_oil_train_ts = diff(log(crude_oil_train_ts))
 dl_crude_oil_holdout_ts = diff(log(crude_oil_holdout_ts))
-```
-
-```{r}
-end(d_crude_oil_holdout_ts)
 ```
 
 ## Diagnostic Plots
@@ -373,17 +362,12 @@ plot_forecast(dl_crude_oil_holdout_ts, dlwti_arma_manual_rolling$fc, "Price Log 
 # We then introduce extrogenous variables and split Train-Holdout
 
 ```{r}
-#usd_idx = read.csv("data/TWEXBGSMTH.csv")
-#usd_idx = read.csv("data/dxy_monthly.csv")
-#ind_prod = read.csv("data/INDPRO.csv")
-#opec_prod = read.csv("data/opcrtotl_monthly.tsv")
-
 # USD index
-usd_idx <- read.csv("data/dxy_monthly.tsv", header = TRUE, sep = "\t")
-usd_idx$Date <- as.Date(usd_idx$Date)
-usd_idx <- usd_idx[order(usd_idx$Date), ]
+usd_idx = read.csv("data/dxy_monthly.tsv", header = TRUE, sep = "\t")
+usd_idx$Date = as.Date(usd_idx$Date)
+usd_idx = usd_idx[order(usd_idx$Date), ]
 
-usd_idx_ts <- ts(
+usd_idx_ts = ts(
   usd_idx$Last.Price,
   start = c(1970,04),
   end = c(2026,04),
@@ -394,17 +378,17 @@ usd_idx_holdout_ts = window(usd_idx_ts, start = c(2011,1), end = c(2026,1))
 
 # Industrial production
 ind_prod = read.csv("data/INDPRO.csv")
-ind_prod$observation_date <- as.Date(ind_prod$observation_date)
-ind_prod_ts <- ts(ind_prod$INDPRO, start = c(1919,1), end = c(2026,2), frequency = 12)
+ind_prod$observation_date = as.Date(ind_prod$observation_date)
+ind_prod_ts = ts(ind_prod$INDPRO, start = c(1919,1), end = c(2026,2), frequency = 12)
 ind_prod_train_ts = window(ind_prod_ts, start = c(1975,1), end = c(2010,12))
 ind_prod_holdout_ts = window(ind_prod_ts, start = c(2011,1), end = c(2026,1))
 
 # OPEC oil production
-opec_prod <- read.csv("data/opcrtotl_monthly.tsv", header = TRUE, sep = "\t")
-opec_prod$Date <- as.Date(opec_prod$Date)
-opec_prod <- opec_prod[order(opec_prod$Date), ]
+opec_prod = read.csv("data/opcrtotl_monthly.tsv", header = TRUE, sep = "\t")
+opec_prod$Date = as.Date(opec_prod$Date)
+opec_prod = opec_prod[order(opec_prod$Date), ]
 
-opec_prod_ts <- ts(
+opec_prod_ts = ts(
   opec_prod$Last.Price,
   start = c(1970,12),
   end = c(2026,03),
@@ -412,30 +396,6 @@ opec_prod_ts <- ts(
 )
 opec_prod_train_ts = window(opec_prod_ts, start = c(1975,1), end = c(2010,12))
 opec_prod_holdout_ts = window(opec_prod_ts, start = c(2011,1), end = c(2026,1))
-
-# World MSCI Oil/Energy Company Index
-
-#TO DO 
-
-
-
-head(usd_idx)
-
-#Saving data
-#write.table(usd_idx_train_ts, "savedData/usd_idx_train_ts_new.csv", sep = ",", row.names = FALSE)
-#write.table(usd_idx_holdout_ts, "savedData/usd_idx_holdout_ts_new.csv", sep = ",", row.names = FALSE)
-
-#write.table(ind_prod_train_ts, "savedData/ind_prod_train_ts_new.csv", sep = ",", row.names = FALSE)
-#write.table(ind_prod_holdout_ts, "savedData/ind_prod_holdout_ts_new.csv", sep = ",", row.names = FALSE)
-
-#write.table(opec_prod_train_ts, "savedData/opec_prod_train_ts_new.csv", sep = ",", row.names = FALSE)
-#write.table(opec_prod_holdout_ts, "savedData/opec_prod_holdout_ts_new.csv", sep = ",", row.names = FALSE)
-```
-
-```{r}
-#usd_ts <- ts(usd_idx$Last.Price, start = c(1975,1), frequency = 12)
-#ind_ts <- ts(ind_prod$INDPRO, start = c(1975,1), frequency = 12)
-#opec_ts <- ts(opec_prod$Last.Price, start = c(1975,1), frequency = 12)
 ```
 
 ```{r}
@@ -447,29 +407,17 @@ plot(opec_prod_ts, main="OPEC Oil Production Index", ylab="")
 ### Transform log-differencing
 
 ```{r}
-d_usd_ts <- diff(usd_idx_ts)
-dl_usd_idx_ts <- diff(log(usd_idx_ts))
-dl_usd_idx_train_ts <- diff(log(usd_idx_train_ts))
+d_usd_ts = diff(usd_idx_ts)
+dl_usd_idx_ts = diff(log(usd_idx_ts))
+dl_usd_idx_train_ts = diff(log(usd_idx_train_ts))
 
-#write.table(d_usd_ts, "savedData/d_usd_ts_new.csv", sep = ",", row.names = FALSE)
-#write.table(dl_usd_idx_train_ts, "savedData/dl_usd_idx_train_ts_new.csv", sep = ",", row.names = FALSE)
+d_ind_ts = diff(ind_prod_ts)
+dl_ind_ts = diff(log(ind_prod_ts))
+dl_ind_train_ts = diff(log(ind_prod_train_ts))
 
-
-d_ind_ts <- diff(ind_prod_ts)
-dl_ind_ts <- diff(log(ind_prod_ts))
-dl_ind_train_ts <- diff(log(ind_prod_train_ts))
-
-#write.table(d_ind_ts, "savedData/d_ind_ts_new.csv", sep = ",", row.names = FALSE)
-#write.table(dl_ind_train_ts, "savedData/dl_ind_train_ts_new.csv", sep = ",", row.names = FALSE)
-
-
-d_opec_ts <- diff(opec_prod_ts)
-dl_opec_prod_ts <- diff(log(opec_prod_ts))
-dl_opec_idx_train_ts <- diff(log(opec_prod_train_ts))
-
-#write.table(d_opec_ts, "savedData/d_opec_ts_new.csv", sep = ",", row.names = FALSE)
-#write.table(dl_opec_idx_train_ts, "savedData/dl_opec_idx_train_ts_new.csv", sep = ",", row.names = FALSE)
-
+d_opec_ts = diff(opec_prod_ts)
+dl_opec_prod_ts = diff(log(opec_prod_ts))
+dl_opec_idx_train_ts = diff(log(opec_prod_train_ts))
 ```
 
 ## Plot
@@ -489,13 +437,10 @@ plot(dl_opec_idx_train_ts, main="Diff. Log OPEC Oil Production Index", ylab="")
 
 ```{r}
 par(mfrow=c(1,2))
-
 acf(dl_crude_oil_train_ts, 
     main = "ACF: dlog(crude_oil_train)")
-
 pacf(dl_crude_oil_train_ts, 
      main = "PACF: dlog(crude_oil_train)")
-
 ```
 
 ## ARMAX
@@ -503,11 +448,8 @@ pacf(dl_crude_oil_train_ts,
 ### Cross-correlation diagnostics for leading variables
 
 ```{r}
-
 par(mfrow=c(1,2))
-
 ccf(dl_ind_train_ts, dl_crude_oil_train_ts, main="CCF: dlog(INDPRO) vs dlog(crude_oil_train)")
-
 plot(stats::lag(dl_ind_train_ts, -1), dl_ind_train_ts,
      xlab="dlog(INDPRO) lag 1", ylab="dlog(crude_oil_train)",
      main="Lag-1 scatter: INDPRO vs crude_oil_train")
@@ -515,9 +457,7 @@ plot(stats::lag(dl_ind_train_ts, -1), dl_ind_train_ts,
 
 ```{r}
 par(mfrow=c(1,2))
-
 ccf(dl_opec_idx_train_ts, dl_crude_oil_train_ts, main="CCF: dlog(OPEC) vs dlog(Bloomberg)")
-
 plot(stats::lag(dl_opec_idx_train_ts, -1), dl_opec_idx_train_ts,
      xlab="dlog(OPEC) lag 1", ylab="dlog(Bloomberg)",
      main="Lag-1 scatter: OPEC vs Bloomberg")
@@ -525,9 +465,7 @@ plot(stats::lag(dl_opec_idx_train_ts, -1), dl_opec_idx_train_ts,
 
 ```{r}
 par(mfrow=c(1,2))
-
 ccf(dl_usd_idx_train_ts, dl_crude_oil_train_ts, main="CCF: dlog(DXY) vs dlog(Bloomberg)")
-
 plot(stats::lag(dl_usd_idx_train_ts, -1), dl_usd_idx_train_ts,
      xlab="dlog(DXY) lag 1", ylab="dlog(Bloomberg)",
      main="Lag-1 scatter: DXY vs Bloomberg")
@@ -536,7 +474,7 @@ plot(stats::lag(dl_usd_idx_train_ts, -1), dl_usd_idx_train_ts,
 ### Align data
 
 ```{r}
-df_all <- ts.intersect(
+df_all = ts.intersect(
   oil  = dl_crude_oil_ts,
   ind  = dl_ind_ts,
   opec = dl_opec_prod_ts,
@@ -550,21 +488,21 @@ end(df_all)
 ### Split Train/Holdout
 
 ```{r, warning=FALSE}
-train_all <- window(df_all, start = c(1975, 2), end = c(2010, 12))
-holdout_all <- window(df_all, start = c(2011, 1), end = c(2026, 1))
+train_all = window(df_all, start = c(1975, 2), end = c(2010, 12))
+holdout_all = window(df_all, start = c(2011, 1), end = c(2026, 1))
 
-y_train <- train_all[, "oil"]
-y_holdout <- holdout_all[, "oil"]
+y_train = train_all[, "oil"]
+y_holdout = holdout_all[, "oil"]
 
-xreg_train <- as.matrix(train_all[, c("ind", "opec", "usd")])
-xreg_holdout <- as.matrix(holdout_all[, c("ind", "opec", "usd")])
+xreg_train = as.matrix(train_all[, c("ind", "opec", "usd")])
+xreg_holdout = as.matrix(holdout_all[, c("ind", "opec", "usd")])
 ```
 
 ### ARIMA baseline
 
 ```{r, warning=FALSE}
 # ARIMA baseline
-arima_model <- auto.arima(
+arima_model = auto.arima(
   y_train,
   seasonal = FALSE,
   stationary = TRUE
@@ -572,13 +510,13 @@ arima_model <- auto.arima(
 
 print(arima_model)
 
-arima_res <- arima_rolling_fc(arima_model, y_holdout)
+arima_res = arima_rolling_fc(arima_model, y_holdout)
 ```
 
 ### ARMAX candidate model
 
 ```{r, warning=FALSE}
-armax_model <- auto.arima(
+armax_model = auto.arima(
   y_train,
   xreg = xreg_train,
   seasonal = FALSE,
@@ -591,15 +529,15 @@ print(armax_model)
 ### extract nonseasonal ARMA order
 
 ```{r}
-order_armax <- c(armax_model$arma[1], 0, armax_model$arma[2])
-include_mean_armax <- any(names(armax_model$coef) %in% c("intercept", "mean"))
+order_armax = c(armax_model$arma[1], 0, armax_model$arma[2])
+include_mean_armax = any(names(armax_model$coef) %in% c("intercept", "mean"))
 ```
 
 
 ### Rolling 1-step ARMAX
 
 ```{r, warning=FALSE}
-armax_res <- rolling_armax_fixed(
+armax_res = rolling_armax_fixed(
   y_train = y_train,
   x_train = xreg_train,
   y_holdout = y_holdout,
@@ -639,7 +577,7 @@ legend("topleft",
 ## Persistence
 
 ```{r}
-persist_result <- persist_fc(dl_crude_oil_train_ts, dl_crude_oil_holdout_ts)
+persist_result = persist_fc(dl_crude_oil_train_ts, dl_crude_oil_holdout_ts)
 persist_result$rmse
 ```
 
@@ -650,7 +588,7 @@ plot_forecast(dl_crude_oil_holdout_ts, persist_result$fc, "Persistence")
 ## Average of Training Set
 
 ```{r}
-avg_result <- avg_fc(dl_crude_oil_train_ts, dl_crude_oil_holdout_ts)
+avg_result = avg_fc(dl_crude_oil_train_ts, dl_crude_oil_holdout_ts)
 avg_result$rmse
 ```
 
@@ -661,9 +599,9 @@ plot_forecast(dl_crude_oil_holdout_ts, avg_result$fc, "Average of Training Set")
 ## Exponential Smoothing
 
 ```{r}
-level <- mean(dl_crude_oil_train_ts)
+level = mean(dl_crude_oil_train_ts)
 alpha = 0.5
-esm_result <- esm_fc(dl_crude_oil_train_ts, dl_crude_oil_holdout_ts, alpha, level)
+esm_result = esm_fc(dl_crude_oil_train_ts, dl_crude_oil_holdout_ts, alpha, level)
 esm_result$rmse
 ```
 ```{r}
@@ -673,15 +611,15 @@ plot_forecast(dl_crude_oil_holdout_ts, esm_result$fc, "Exponential Smoothing")
 ## Linear in Previous Observation
 
 ```{r}
-n_train <- length(dl_crude_oil_train_ts)
-yt <- dl_crude_oil_train_ts[2:n_train]
-yt1 <- dl_crude_oil_train_ts[1:(n_train - 1)]
-lm_fit <- lm(yt ~ yt1)
+n_train = length(dl_crude_oil_train_ts)
+yt = dl_crude_oil_train_ts[2:n_train]
+yt1 = dl_crude_oil_train_ts[1:(n_train - 1)]
+lm_fit = lm(yt ~ yt1)
 print(lm_fit)
 ```
 
 ```{r}
-linreg_result <- linreg_fc(
+linreg_result = linreg_fc(
   train_last = dl_crude_oil_train_ts[n_train],
   holdout = dl_crude_oil_holdout_ts,
   b0 = coef(lm_fit)[1],
@@ -700,7 +638,7 @@ plot_forecast(dl_crude_oil_holdout_ts, linreg_result$fc,
 ```{r}
 # Rolling RMSE + AIC
 
-model_names <- c(
+model_names = c(
   "ARMA (diff)",
   "ARMA (log diff - auto)",
   "ARMA (log diff - manual)",
@@ -712,7 +650,7 @@ model_names <- c(
   "Linear Regression"
 )
 
-rmse_values <- c(
+rmse_values = c(
   dwti_arma_rolling$rmse,
   dlwti_arma_rolling$rmse,
   dlwti_arma_manual_rolling$rmse,
@@ -724,7 +662,7 @@ rmse_values <- c(
   linreg_result$rmse
 )
 
-aic_values <- c(
+aic_values = c(
   AIC(dwti_arma),
   AIC(dlwti_arma),
   AIC(dlwti_arma_manual),
@@ -736,12 +674,35 @@ aic_values <- c(
   NA
 )
 
-results_table <- data.frame(
+results_table = data.frame(
   Model = model_names,
   Rolling_RMSE = rmse_values,
   AIC = aic_values
 )
 
 print(results_table)
+```
+
+# Saving Data
+
+```{r}
+# Saving data
+
+#write.table(usd_idx_train_ts, "savedData/usd_idx_train_ts_new.csv", sep = ",", row.names = FALSE)
+#write.table(usd_idx_holdout_ts, "savedData/usd_idx_holdout_ts_new.csv", sep = ",", row.names = FALSE)
+
+#write.table(ind_prod_train_ts, "savedData/ind_prod_train_ts_new.csv", sep = ",", row.names = FALSE)
+#write.table(ind_prod_holdout_ts, "savedData/ind_prod_holdout_ts_new.csv", sep = ",", row.names = FALSE)
+#write.table(crude_oil_ts, "savedData/crude_oil_ts_new.csv", sep = ",", row.names = FALSE)
+
+#write.table(opec_prod_train_ts, "savedData/opec_prod_train_ts_new.csv", sep = ",", row.names = FALSE)
+#write.table(opec_prod_holdout_ts, "savedData/opec_prod_holdout_ts_new.csv", sep = ",", row.names = FALSE)
+
+#write.table(d_usd_ts, "savedData/d_usd_ts_new.csv", sep = ",", row.names = FALSE)
+#write.table(dl_usd_idx_train_ts, "savedData/dl_usd_idx_train_ts_new.csv", sep = ",", row.names = FALSE)
+#write.table(d_ind_ts, "savedData/d_ind_ts_new.csv", sep = ",", row.names = FALSE)
+#write.table(dl_ind_train_ts, "savedData/dl_ind_train_ts_new.csv", sep = ",", row.names = FALSE)
+#write.table(d_opec_ts, "savedData/d_opec_ts_new.csv", sep = ",", row.names = FALSE)
+#write.table(dl_opec_idx_train_ts, "savedData/dl_opec_idx_train_ts_new.csv", sep = ",", row.names = FALSE)
 ```
 
