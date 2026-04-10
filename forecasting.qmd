@@ -630,21 +630,21 @@ print(results_table)
 ```{r}
 # Saving data
 
-#write.table(usd_idx_train_ts, "savedData/usd_idx_train_ts_new.csv", sep = ",", row.names = FALSE)
-#write.table(usd_idx_holdout_ts, "savedData/usd_idx_holdout_ts_new.csv", sep = ",", row.names = FALSE)
+write.table(usd_idx_train_ts, "savedData/usd_idx_train_ts_new.csv", sep = ",", row.names = FALSE)
+write.table(usd_idx_holdout_ts, "savedData/usd_idx_holdout_ts_new.csv", sep = ",", row.names = FALSE)
 
-#write.table(ind_prod_train_ts, "savedData/ind_prod_train_ts_new.csv", sep = ",", row.names = FALSE)
-#write.table(ind_prod_holdout_ts, "savedData/ind_prod_holdout_ts_new.csv", sep = ",", row.names = FALSE)
-#write.table(crude_oil_ts, "savedData/crude_oil_ts_new.csv", sep = ",", row.names = FALSE)
+write.table(ind_prod_train_ts, "savedData/ind_prod_train_ts_new.csv", sep = ",", row.names = FALSE)
+write.table(ind_prod_holdout_ts, "savedData/ind_prod_holdout_ts_new.csv", sep = ",", row.names = FALSE)
+write.table(crude_oil_ts, "savedData/crude_oil_ts_new.csv", sep = ",", row.names = FALSE)
 
-#write.table(opec_prod_train_ts, "savedData/opec_prod_train_ts_new.csv", sep = ",", row.names = FALSE)
-#write.table(opec_prod_holdout_ts, "savedData/opec_prod_holdout_ts_new.csv", sep = ",", row.names = FALSE)
+write.table(opec_prod_train_ts, "savedData/opec_prod_train_ts_new.csv", sep = ",", row.names = FALSE)
+write.table(opec_prod_holdout_ts, "savedData/opec_prod_holdout_ts_new.csv", sep = ",", row.names = FALSE)
 
-#write.table(d_usd_ts, "savedData/d_usd_ts_new.csv", sep = ",", row.names = FALSE)
-#write.table(dl_usd_idx_train_ts, "savedData/dl_usd_idx_train_ts_new.csv", sep = ",", row.names = FALSE)
-#write.table(d_ind_ts, "savedData/d_ind_ts_new.csv", sep = ",", row.names = FALSE)
-#write.table(dl_ind_train_ts, "savedData/dl_ind_train_ts_new.csv", sep = ",", row.names = FALSE)
-#write.table(d_opec_ts, "savedData/d_opec_ts_new.csv", sep = ",", row.names = FALSE)
-#write.table(dl_opec_idx_train_ts, "savedData/dl_opec_idx_train_ts_new.csv", sep = ",", row.names = FALSE)
+write.table(d_usd_ts, "savedData/d_usd_ts_new.csv", sep = ",", row.names = FALSE)
+write.table(dl_usd_idx_train_ts, "savedData/dl_usd_idx_train_ts_new.csv", sep = ",", row.names = FALSE)
+write.table(d_ind_ts, "savedData/d_ind_ts_new.csv", sep = ",", row.names = FALSE)
+write.table(dl_ind_train_ts, "savedData/dl_ind_train_ts_new.csv", sep = ",", row.names = FALSE)
+write.table(d_opec_ts, "savedData/d_opec_ts_new.csv", sep = ",", row.names = FALSE)
+write.table(dl_opec_idx_train_ts, "savedData/dl_opec_idx_train_ts_new.csv", sep = ",", row.names = FALSE)
 ```
 
