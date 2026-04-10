@@ -8,6 +8,10 @@ editor: visual
 library(forecast)
 ```
 
+## Functions
+
+Some of the functions below were taken from labs or lectures.
+
 ```{r}
 # Function for variogram as defined in
 # Bisgaard and Kulahci (2011). Time Series Analysis and Forecasting by Example, Wiley
@@ -145,7 +149,9 @@ arima_rolling_fc = function(fitted_model, holdout, iprint = FALSE) {
   
   return(list(rmse = sqrt(sse / nh), fc = fc_vec))
 }
+```
 
+```{r}
 rolling_armax_fixed = function(y_train, x_train, y_holdout, x_holdout,
                                 order, include_mean = TRUE) {
   nh = length(y_holdout)
@@ -178,66 +184,6 @@ rolling_armax_fixed = function(y_train, x_train, y_holdout, x_holdout,
 
   rmse = sqrt(mean((y_holdout - fc_vec)^2))
   list(rmse = rmse, fc = fc_vec)
-}
-```
-
-```{r}
-rolling_armax = function(y_train, x_train, y_holdout, x_holdout,
-                          order = c(0,0,1), include_mean = TRUE) {
-  nh = length(y_holdout)
-  fc_vec = numeric(nh)
-
-  y_hist = as.numeric(y_train)
-  x_hist = as.matrix(x_train)
-  x_holdout = as.matrix(x_holdout)
-
-  for (i in 1:nh) {
-    fit = forecast::Arima(
-      y_hist,
-      order = order,
-      xreg = x_hist,
-      include.mean = include_mean,
-      method = "ML"
-    )
-
-    newx = matrix(x_holdout[i, ], nrow = 1)
-
-    fc_vec[i] = as.numeric(
-      forecast::forecast(fit, xreg = newx, h = 1)$mean
-    )
-
-    # update history with the ACTUAL next observation
-    y_hist = c(y_hist, y_holdout[i])
-    x_hist = rbind(x_hist, newx)
-  }
-
-  rmse = sqrt(mean((y_holdout - fc_vec)^2))
-  list(rmse = rmse, fc = fc_vec)
-}
-
-armax_fc = function(tsdata, ntrain, order, traincoef, xreg)
-{
-  coef_names = names(traincoef)
-  
-  include_mean = any(coef_names %in% c("intercept", "mean"))
-  
-  obj = arima(tsdata,
-              order = order,
-              init = traincoef,
-              fixed = traincoef,
-              xreg = xreg,
-              include.mean = include_mean,
-              method = "ML",
-              optim.control = list(maxit = 0))
-  
-  fc = tsdata - obj$residuals
-  
-  holdout_fc = fc[(ntrain+1):length(tsdata)]
-  holdout = tsdata[(ntrain+1):length(tsdata)]
-  
-  rmse = sqrt(mean((holdout - holdout_fc)^2))
-  
-  return(list(rmse = rmse, fc = holdout_fc))
 }
 ```
 
@@ -297,13 +243,7 @@ pacf(dl_crude_oil_train_ts)
 
 ```{r}
 variogram(crude_oil_train_ts, lagmax=25, iprint=T)
-```
-
-```{r}
 variogram(d_crude_oil_train_ts, lagmax=25, iprint=T)
-```
-
-```{r}
 variogram(dl_crude_oil_train_ts, lagmax=25, iprint=T)
 ```
 
@@ -359,7 +299,9 @@ plot_forecast(dl_crude_oil_holdout_ts, dlwti_arma_rolling$fc, "Price Log Differe
 plot_forecast(dl_crude_oil_holdout_ts, dlwti_arma_manual_rolling$fc, "Price Log Difference - Manual ARMA")
 ```
 
-# We then introduce extrogenous variables and split Train-Holdout
+# Extrogenous variables
+
+## Load data
 
 ```{r}
 # USD index
@@ -404,7 +346,7 @@ plot(ind_prod_ts, main="Industrial Production Index", ylab="")
 plot(opec_prod_ts, main="OPEC Oil Production Index", ylab="")
 ```
 
-### Transform log-differencing
+## Transform log-differencing
 
 ```{r}
 d_usd_ts = diff(usd_idx_ts)
@@ -547,7 +489,7 @@ armax_res = rolling_armax_fixed(
 )
 ```
 
-### RMSE comparison
+### RMSE comparison (ARIMA vs ARMAX)
 
 ```{r, warning=FALSE}
 cat("ARIMA RMSE:", arima_res$rmse, "\n")
