@@ -68,6 +68,22 @@ linreg_fc = function(train_last, holdout, b0,b1)
   return(list(rmse=rmse, fc=fc_vec))
 }
 
+# Average Forecast
+avg_fc <- function(train, holdout) {
+  nh <- length(holdout)
+  avg <- mean(train)
+  sse <- 0
+  fc_vec <- numeric(nh)
+  for (i in 1:nh) {
+    fc <- avg
+    fc_vec[i] <- fc
+    yt <- holdout[i]
+    fcerror <- yt - fc
+    sse <- sse + (fcerror^2)
+  }
+  return(list(rmse = sqrt(sse/nh), fc = fc_vec))
+}
+
 # Simple Exponential Smoothing
 esm_fc <- function(train, holdout, alpha, level, iprint = FALSE) {
   nh <- length(holdout)
@@ -268,7 +284,7 @@ dl_crude_oil_holdout_ts = diff(log(crude_oil_holdout_ts))
 end(d_crude_oil_holdout_ts)
 ```
 
-##Diagnostic Plots
+## Diagnostic Plots
 
 ```{r}
 plot(crude_oil_ts)
@@ -302,7 +318,7 @@ variogram(d_crude_oil_train_ts, lagmax=25, iprint=T)
 variogram(dl_crude_oil_train_ts, lagmax=25, iprint=T)
 ```
 
-# We first try ARIMA
+# We first try ARMA
 
 ## ARMA on difference
 
@@ -332,11 +348,26 @@ dlwti_arma_rolling = arima_rolling_fc(dlwti_arma, dl_crude_oil_holdout_ts)
 dlwti_arma_rolling$rmse
 ```
 
+## ARMA based on ACF/PACF
+
+```{r}
+dlwti_arma_manual = Arima(dl_crude_oil_train_ts, order = c(0, 0, 1))
+print(dlwti_arma_manual)
+```
+
+### Rolling 1-step forward
+
+```{r}
+dlwti_arma_manual_rolling = arima_rolling_fc(dlwti_arma_manual, dl_crude_oil_holdout_ts)
+dlwti_arma_manual_rolling$rmse
+```
+
 ## Plots
 
 ```{r}
 plot_forecast(d_crude_oil_holdout_ts, dwti_arma_rolling$fc, "Price Difference")
 plot_forecast(dl_crude_oil_holdout_ts, dlwti_arma_rolling$fc, "Price Log Difference")
+plot_forecast(dl_crude_oil_holdout_ts, dlwti_arma_manual_rolling$fc, "Price Log Difference - Manual ARMA")
 ```
 
 # We then introduce extrogenous variables and split Train-Holdout
@@ -347,7 +378,7 @@ plot_forecast(dl_crude_oil_holdout_ts, dlwti_arma_rolling$fc, "Price Log Differe
 #ind_prod = read.csv("data/INDPRO.csv")
 #opec_prod = read.csv("data/opcrtotl_monthly.tsv")
 
-#usd index
+# USD index
 usd_idx <- read.csv("data/dxy_monthly.tsv", header = TRUE, sep = "\t")
 usd_idx$Date <- as.Date(usd_idx$Date)
 usd_idx <- usd_idx[order(usd_idx$Date), ]
@@ -361,7 +392,7 @@ usd_idx_ts <- ts(
 usd_idx_train_ts = window(usd_idx_ts, start = c(1975,1), end = c(2010,12))
 usd_idx_holdout_ts = window(usd_idx_ts, start = c(2011,1), end = c(2026,1))
 
-#Industrial production
+# Industrial production
 ind_prod = read.csv("data/INDPRO.csv")
 ind_prod$observation_date <- as.Date(ind_prod$observation_date)
 ind_prod_ts <- ts(ind_prod$INDPRO, start = c(1919,1), end = c(2026,2), frequency = 12)
@@ -383,6 +414,7 @@ opec_prod_train_ts = window(opec_prod_ts, start = c(1975,1), end = c(2010,12))
 opec_prod_holdout_ts = window(opec_prod_ts, start = c(2011,1), end = c(2026,1))
 
 # World MSCI Oil/Energy Company Index
+
 #TO DO 
 
 
@@ -602,6 +634,63 @@ legend("topleft",
 ```
 
 
-## Simple Rules
+# Simple Forecasting Rules
 
-# TODO
+## Persistence
+
+```{r}
+persist_result <- persist_fc(dl_crude_oil_train_ts, dl_crude_oil_holdout_ts)
+persist_result$rmse
+```
+
+```{r}
+plot_forecast(dl_crude_oil_holdout_ts, persist_result$fc, "Persistence")
+```
+
+## Average of Training Set
+
+```{r}
+avg_result <- avg_fc(dl_crude_oil_train_ts, dl_crude_oil_holdout_ts)
+avg_result$rmse
+```
+
+```{r}
+plot_forecast(dl_crude_oil_holdout_ts, avg_result$fc, "Average of Training Set")
+```
+
+## Exponential Smoothing
+
+```{r}
+level <- mean(dl_crude_oil_train_ts)
+alpha = 0.5
+esm_result <- esm_fc(dl_crude_oil_train_ts, dl_crude_oil_holdout_ts, alpha, level)
+esm_result$rmse
+```
+```{r}
+plot_forecast(dl_crude_oil_holdout_ts, esm_result$fc, "Exponential Smoothing")
+```
+
+## Linear in Previous Observation
+
+```{r}
+n_train <- length(dl_crude_oil_train_ts)
+yt <- dl_crude_oil_train_ts[2:n_train]
+yt1 <- dl_crude_oil_train_ts[1:(n_train - 1)]
+lm_fit <- lm(yt ~ yt1)
+print(lm_fit)
+```
+
+```{r}
+linreg_result <- linreg_fc(
+  train_last = dl_crude_oil_train_ts[n_train],
+  holdout = dl_crude_oil_holdout_ts,
+  b0 = coef(lm_fit)[1],
+  b1 = coef(lm_fit)[2]
+)
+linreg_result$rmse
+```
+
+```{r}
+plot_forecast(dl_crude_oil_holdout_ts, linreg_result$fc,
+              "Linear in Previous Observation")
+```
