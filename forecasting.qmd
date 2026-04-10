@@ -694,3 +694,54 @@ linreg_result$rmse
 plot_forecast(dl_crude_oil_holdout_ts, linreg_result$fc,
               "Linear in Previous Observation")
 ```
+
+# Comparison
+
+```{r}
+# Rolling RMSE + AIC
+
+model_names <- c(
+  "ARMA (diff)",
+  "ARMA (log diff - auto)",
+  "ARMA (log diff - manual)",
+  "ARIMA (baseline)",
+  "ARMAX",
+  "Persistence",
+  "Average",
+  "Exponential Smoothing",
+  "Linear Regression"
+)
+
+rmse_values <- c(
+  dwti_arma_rolling$rmse,
+  dlwti_arma_rolling$rmse,
+  dlwti_arma_manual_rolling$rmse,
+  arima_res$rmse,
+  armax_res$rmse,
+  persist_result$rmse,
+  avg_result$rmse,
+  esm_result$rmse,
+  linreg_result$rmse
+)
+
+aic_values <- c(
+  AIC(dwti_arma),
+  AIC(dlwti_arma),
+  AIC(dlwti_arma_manual),
+  AIC(arima_model),
+  AIC(armax_model),
+  NA,
+  NA,
+  NA,
+  NA
+)
+
+results_table <- data.frame(
+  Model = model_names,
+  Rolling_RMSE = rmse_values,
+  AIC = aic_values
+)
+
+print(results_table)
+```
+
